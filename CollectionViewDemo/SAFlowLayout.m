@@ -101,31 +101,33 @@ static CGFloat const ITEM_DISTANCE_Z = 400.0f;
  */
 - (CGPoint)targetContentOffsetForProposedContentOffset:(CGPoint)proposedContentOffset withScrollingVelocity:(CGPoint)velocity
 {
-    NSLog(@"targetContentOffsetForProposedContentOffset: %@ withScrollingVelocity: %@", NSStringFromCGPoint(proposedContentOffset), NSStringFromCGPoint(velocity));
+    CGFloat proposedContentOffsetCenterX = proposedContentOffset.x + self.itemSize.width * 0.5f;
+    CGRect proposedRect = self.collectionView.bounds;
     
-    // 计算出最终显示的矩形框
-    CGRect rect;
-    rect.origin.y = 0;
-    rect.origin.x = proposedContentOffset.x;
-    rect.size = self.collectionView.frame.size;
-    
-    // 获得super已经计算好的布局属性
-    NSArray *array = [super layoutAttributesForElementsInRect:rect];
-    
-    // 计算collectionView最中心点的x值
-    CGFloat centerX = proposedContentOffset.x + self.collectionView.frame.size.width * 0.5;
-    
-    // 存放最小的间距值
-    CGFloat minDelta = MAXFLOAT;
-    for (UICollectionViewLayoutAttributes *attrs in array) {
-        if (ABS(minDelta) > ABS(attrs.center.x - centerX)) {
-            minDelta = attrs.center.x - centerX;
+    UICollectionViewLayoutAttributes* candidateAttributes;
+    for (UICollectionViewLayoutAttributes* attributes in [super layoutAttributesForElementsInRect:proposedRect]) {
+        
+        if (attributes.representedElementCategory != UICollectionElementCategoryCell) {
+            continue;
+        }
+        
+        if(!candidateAttributes) {
+            candidateAttributes = attributes;
+            continue;
+        }
+        
+        if (velocity.x < 0) {
+            // Do nothing
+        } else if (velocity.x > 0) {
+            candidateAttributes = attributes;
+        } else {
+            if (fabs(attributes.center.x - proposedContentOffsetCenterX) < fabs(candidateAttributes.center.x - proposedContentOffsetCenterX)) {
+                candidateAttributes = attributes;
+            }
         }
     }
     
-    // 修改原有的偏移量
-    proposedContentOffset.x += minDelta;
-    return proposedContentOffset;
+    return CGPointMake(candidateAttributes.center.x - self.collectionView.bounds.size.width * 0.5f, proposedContentOffset.y);
 }
 
 @end
